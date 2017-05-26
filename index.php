@@ -8,7 +8,7 @@ function fetch($url)
         CURLOPT_RETURNTRANSFER => 1,
         CURLOPT_URL => $url,
         CURLOPT_USERAGENT => 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:25.0) Gecko/20100101 Firefox/25.0'
-    ));
+        ));
     $resp = curl_exec($curl);
     curl_close($curl);
     return $resp;
@@ -19,7 +19,7 @@ $matches = array();
 preg_match_all('/href="\/index\.php(\/relacje-live\/[^"]+)/', $main, $matches);
 $links = array_unique($matches[1]);
 $link = 'http://m.radiogdansk.pl' . $links[0];
-$html = file_get_html($link);
+$html = str_get_html(fetch($link));
 
 $hours = array();
 $headers = array();
@@ -36,15 +36,15 @@ foreach ($html->find('.catItemTitle-live') as $key => $header) {
 
 foreach ($html->find('.latestItemIntroText') as $key => $description) {
 	$text = trim(strip_tags($description->innertext));
-	$text = str_replace("Podziel się", "", $text);
+	$text = preg_replace("/Podziel się/", "", $text);
 	$text = preg_replace("/\s+/", " ", $text);
-    $descriptions[] = mb_convert_encoding(trim($text), "UTF-8");
+    $descriptions[] = trim($text);
 }
 
 for ($i = 0; $i < count($hours); $i++) {
-        $table[$i]['hour'] = $hours[$i];
-        $table[$i]['header'] = $headers[$i];
-        $table[$i]['description'] = $descriptions[$i];
+    $table[$i]['hour'] = $hours[$i];
+    $table[$i]['header'] = $headers[$i];
+    $table[$i]['description'] = $descriptions[$i];
 }
 
 header('Content-Type: application/json');
