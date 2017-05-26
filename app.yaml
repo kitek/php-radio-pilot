@@ -2,6 +2,7 @@ runtime: php55
 api_version: 1
 
 handlers:
+- url: /cron/news
+  script: cron/news.php
 - url: /.*
   script: index.php
-

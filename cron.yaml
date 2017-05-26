@@ -1,0 +1,4 @@
+cron:
+- description: fetch news
+  url: /cron/news
+  schedule: every 10 mins
