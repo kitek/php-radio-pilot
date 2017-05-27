@@ -1,7 +1,6 @@
 <?php
-$memcache = new Memcache();
-$news = $memcache->get('news');
-if (empty($news)) $news = array();
+require_once __DIR__ . '/vendor/autoload.php';
+$app = require __DIR__ . '/app.php';
 
-header('Content-Type: application/json');
-echo json_encode($news);
+$app['debug'] = strpos(getenv('SERVER_SOFTWARE'), 'Development') === 0;
+$app->run();

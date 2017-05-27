@@ -4,5 +4,6 @@ api_version: 1
 handlers:
 - url: /cron/news
   script: cron/news.php
+  login: admin
 - url: /.*
   script: index.php
