@@ -1,9 +1,10 @@
 runtime: php55
 api_version: 1
+threadsafe: true
 
 handlers:
 - url: /cron/news
-  script: cron/news.php
+  script: src/cron/news.php
   login: admin
 - url: /.*
-  script: index.php
+  script: web/index.php

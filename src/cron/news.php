@@ -8,7 +8,7 @@ function fetch($url)
         CURLOPT_RETURNTRANSFER => 1,
         CURLOPT_URL => $url,
         CURLOPT_USERAGENT => 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:25.0) Gecko/20100101 Firefox/25.0'
-        ));
+    ));
     $resp = curl_exec($curl);
     curl_close($curl);
     return $resp;
@@ -35,9 +35,9 @@ foreach ($html->find('.catItemTitle-live') as $key => $header) {
 }
 
 foreach ($html->find('.latestItemIntroText') as $key => $description) {
-	$text = trim(strip_tags($description->innertext));
-	$text = preg_replace("/Podziel się/", "", $text);
-	$text = preg_replace("/\s+/", " ", $text);
+    $text = trim(strip_tags($description->innertext));
+    $text = preg_replace("/Podziel się/", "", $text);
+    $text = preg_replace("/\s+/", " ", $text);
     $descriptions[] = trim($text);
 }
 

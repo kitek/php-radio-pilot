@@ -1,6 +1,12 @@
 {
-	"require": {
-		"google/cloud": "*",
-		"silex/silex": "~2.0"
-	}
+  "autoload": {
+    "psr-4": {
+      "App\\": "src"
+    }
+  },
+  "require": {
+    "silex/silex": "~2.0",
+    "symfony/yaml": "^3.0",
+    "tomwalder/php-gds": "v3.*"
+  }
 }
