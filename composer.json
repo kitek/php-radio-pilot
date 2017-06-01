@@ -7,6 +7,7 @@
   "require": {
     "silex/silex": "~2.0",
     "symfony/yaml": "^3.0",
-    "tomwalder/php-gds": "v3.*"
+    "tomwalder/php-gds": "v3.*",
+    "sunra/php-simple-html-dom-parser": "1.5.2"
   }
 }
