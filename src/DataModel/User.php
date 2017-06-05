@@ -36,6 +36,11 @@ class User
         return $this->store->fetchByName($deviceToken);
     }
 
+    public function findAll()
+    {
+        return $this->store->fetchAll();
+    }
+
     public function remove($user)
     {
         $this->store->delete($user);

@@ -1,4 +1,5 @@
 <?php
+use App\DataModel\User;
 use Sunra\PhpSimple\HtmlDomParser;
 use Symfony\Component\Yaml\Yaml;
 
@@ -8,6 +9,7 @@ require_once __DIR__ . '/../../vendor/autoload.php';
 class NewsScraper
 {
     const BASE_URL = "http://m.radiogdansk.pl/";
+    const CACHE_KEY = "news";
 
     private $date = "";
     private $href = "";
@@ -111,13 +113,45 @@ class NewsScraper
     private function cacheIt()
     {
         $memcache = new Memcache();
-        $memcache->set('news', $this->results);
+        $updatedAt = $this->getUpdatedAt($this->results);
+
+        $news = $memcache->get(self::CACHE_KEY);
+        $memcache->set(self::CACHE_KEY, ['items' => $this->results, 'updatedAt' => $updatedAt]);
+
+        if (!empty($news)) {
+            $lastUpdatedAt = $this->getUpdatedAt($news['items']);
+            if (!empty($lastUpdatedAt) && $lastUpdatedAt != $updatedAt) {
+                $this->sendNewsletter($lastUpdatedAt);
+            }
+        }
     }
 
-    function display()
+    private function getUpdatedAt($items)
     {
-        header('Content-Type: application/json');
-        echo json_encode($this->results);
+        if (empty($items)) return '';
+        usort($items, function ($a, $b) {
+            return $a['date'] < $b['date'];
+        });
+        return $items[0]['date'];
+    }
+
+    private function sendNewsletter($lastUpdatedAt)
+    {
+        $news = array_filter($this->results, function ($a) use ($lastUpdatedAt) {
+            return $a['date'] > $lastUpdatedAt;
+        });
+        if (empty($news)) return;
+        $lastNews = $news[0];
+
+        // find users to send
+        $users = new User();
+        $rows = $users->findAll();
+        if (empty($rows)) return;
+        $ids = array_map(function ($a) {
+            return $a->getKeyName();
+        }, $rows);
+
+        $this->sendNotification($ids, $lastNews['header'], $lastNews['description']);
     }
 
     private function sendNotification($to, $title, $body)
@@ -128,7 +162,7 @@ class NewsScraper
                 'body' => $body,
                 'sound' => 'default'
             ],
-            'to' => $to
+            'registration_ids' => $to
         ];
 
         return $this->post($this->fcmServerUrl, json_encode($message), $this->fcmServerKey);
@@ -151,6 +185,12 @@ class NewsScraper
         $resp = curl_exec($curl);
         curl_close($curl);
         return $resp;
+    }
+
+    function display()
+    {
+        header('Content-Type: application/json');
+        echo json_encode($this->results);
     }
 }
 
