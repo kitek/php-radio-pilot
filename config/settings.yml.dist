@@ -1,2 +1,4 @@
 # Google credentials and configuration
 google_project_id:  YOUR_PROJECT_ID
+fcm_url: "https://fcm.googleapis.com/fcm/send"
+fcm_server_key: YOUR_FCM_SERVER_KEY

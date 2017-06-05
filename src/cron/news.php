@@ -1,5 +1,6 @@
 <?php
 use Sunra\PhpSimple\HtmlDomParser;
+use Symfony\Component\Yaml\Yaml;
 
 require_once __DIR__ . '/../../vendor/autoload.php';
 
@@ -11,6 +12,14 @@ class NewsScraper
     private $date = "";
     private $href = "";
     private $results = [];
+    private $fcmServerUrl = "";
+    private $fcmServerKey = "";
+
+    public function __construct($config)
+    {
+        $this->fcmServerUrl = $config['fcm_url'];
+        $this->fcmServerKey = $config['fcm_server_key'];
+    }
 
     function execute()
     {
@@ -93,7 +102,7 @@ class NewsScraper
             $descriptions[] = trim($text);
         }
         for ($i = 0; $i < count($hours); $i++) {
-            $this->results[$i]['hour'] = $this->date . " " . $hours[$i];
+            $this->results[$i]['date'] = $this->date . " " . $hours[$i];
             $this->results[$i]['header'] = $headers[$i];
             $this->results[$i]['description'] = $descriptions[$i];
         }
@@ -110,9 +119,44 @@ class NewsScraper
         header('Content-Type: application/json');
         echo json_encode($this->results);
     }
+
+    private function sendNotification($to, $title, $body)
+    {
+        $message = [
+            'notification' => [
+                'title' => $title,
+                'body' => $body,
+                'sound' => 'default'
+            ],
+            'to' => $to
+        ];
+
+        return $this->post($this->fcmServerUrl, json_encode($message), $this->fcmServerKey);
+    }
+
+    private function post($url, $message, $key)
+    {
+        $curl = curl_init();
+        curl_setopt_array($curl, array(
+            CURLOPT_POST => 1,
+            CURLOPT_POSTFIELDS => $message,
+            CURLOPT_HTTPHEADER => [
+                'Content-Type: application/json',
+                "Authorization: key=$key",
+            ],
+            CURLOPT_RETURNTRANSFER => 1,
+            CURLOPT_URL => $url,
+            CURLOPT_USERAGENT => 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:25.0) Gecko/20100101 Firefox/25.0'
+        ));
+        $resp = curl_exec($curl);
+        curl_close($curl);
+        return $resp;
+    }
 }
 
-$newsScraper = new NewsScraper();
+$config = __DIR__ . '/../../config/settings.yml';
+
+$newsScraper = new NewsScraper(Yaml::parse(file_get_contents($config)));
 $newsScraper->execute();
 
 echo 'OK ' . date('Y-m-d H:i:s');
