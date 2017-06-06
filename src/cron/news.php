@@ -116,7 +116,7 @@ class NewsScraper
         $updatedAt = $this->getUpdatedAt($this->results);
 
         $news = $memcache->get(self::CACHE_KEY);
-        $memcache->set(self::CACHE_KEY, ['items' => $this->results, 'updatedAt' => $updatedAt]);
+        $memcache->set(self::CACHE_KEY, ['items' => $this->results, 'updatedAt' => date('Y-m-d H:i:s')]);
 
         if (!empty($news)) {
             $lastUpdatedAt = $this->getUpdatedAt($news['items']);

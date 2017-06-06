@@ -5,8 +5,13 @@ use Symfony\Component\HttpFoundation\Request;
 
 $app->get('/news', function () use ($app) {
     $memcache = new Memcache();
-    $news = $memcache->get('news') ?: [];
-    return $app->json($news);
+    $news = $memcache->get('news') ?: ['items' => [], 'expiredAt' => 0];
+    $intervalInSec = 10 * 60;
+    $expiresIn = (strtotime($news['updatedAt']) + $intervalInSec) - time();
+    return $app->json([
+        'items' => $news['items'],
+        'expiresIn' => $expiresIn > 0 ? $expiresIn : 0
+    ]);
 });
 
 $app->post('/users/register', function (Request $request) use ($app) {
