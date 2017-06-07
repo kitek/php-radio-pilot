@@ -6,8 +6,7 @@ use Symfony\Component\HttpFoundation\Request;
 $app->get('/news', function () use ($app) {
     $memcache = new Memcache();
     $news = $memcache->get('news') ?: ['items' => [], 'expiredAt' => 0];
-    $intervalInSec = 10 * 60;
-    $expiresIn = (strtotime($news['updatedAt']) + $intervalInSec) - time();
+    $expiresIn = (strtotime($news['updatedAt']) + $app['config']['cron_interval']) - time();
     return $app->json([
         'items' => $news['items'],
         'expiresIn' => $expiresIn > 0 ? $expiresIn : 0

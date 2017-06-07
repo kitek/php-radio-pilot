@@ -1,4 +1,5 @@
 cron:
 - description: fetch news
   url: /cron/news
-  schedule: every 10 mins
+  schedule: every 5 minutes from 06:00 to 20:00
+  timezone: Europe/Warsaw
