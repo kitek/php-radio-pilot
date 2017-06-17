@@ -162,6 +162,8 @@ class NewsScraper
                 'body' => $body,
                 'sound' => 'default'
             ],
+            'time_to_live' => 300,
+            'collapse_key' => 'News',
             'registration_ids' => $to
         ];
 
