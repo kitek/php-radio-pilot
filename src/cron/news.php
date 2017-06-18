@@ -142,8 +142,7 @@ class NewsScraper
         });
         if (empty($news)) return;
         $lastNews = $news[0];
-
-        // find users to send
+        
         $users = new User();
         $rows = $users->findAll();
         if (empty($rows)) return;

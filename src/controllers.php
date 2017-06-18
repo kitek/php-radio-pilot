@@ -1,17 +1,23 @@
 <?php
 
+use App\Controller\AlertsController;
+use App\Controller\NewsController;
 use Silex\Application;
 use Symfony\Component\HttpFoundation\Request;
 
-$app->get('/news', function () use ($app) {
-    $memcache = new Memcache();
-    $news = $memcache->get('news') ?: ['items' => [], 'expiredAt' => 0];
-    $expiresIn = (strtotime($news['updatedAt']) + $app['config']['cron_interval']) - time();
-    return $app->json([
-        'items' => $news['items'],
-        'expiresIn' => $expiresIn > 0 ? $expiresIn : 0
-    ]);
-});
+$app['news.controller'] = function () use ($app) {
+    return new NewsController($app['config']);
+};
+$app['alerts.controller'] = function () use ($app) {
+    return new AlertsController($app['model.user']);
+};
+
+$app->get('/news', 'news.controller:indexAction');
+$app->get('/alerts', 'alerts.controller:indexAction');
+$app->post('/alerts', 'alerts.controller:updateAction');
+$app->put('/alerts/phrases/{phrase}', 'alerts.controller:addPhraseAction');
+$app->delete('/alerts/phrases/{phrase}', 'alerts.controller:delPhraseAction');
+
 
 $app->post('/users/register', function (Request $request) use ($app) {
     $deviceToken = $request->get('deviceToken');
@@ -22,7 +28,7 @@ $app->post('/users/register', function (Request $request) use ($app) {
         ], 400);
     }
     $userStore = $app['model.user'];
-    $user = $userStore->find($deviceToken);
+    $user = $userStore->findByDeviceToken($deviceToken);
     if ($user) {
         return $app->json([
             'error' => 'Provided `deviceToken` is already registered.',
@@ -42,7 +48,7 @@ $app->post('/users/unregister', function (Request $request) use ($app) {
         ], 400);
     }
     $userStore = $app['model.user'];
-    $user = $userStore->find($deviceToken);
+    $user = $userStore->findByDeviceToken($deviceToken);
     if (!$user || $user->secretToken !== $secretToken) {
         return $app->json([
             'error' => 'Parameter `deviceToken` or `secretToken` is invalid.',

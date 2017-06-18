@@ -8,3 +8,7 @@ handlers:
   login: admin
 - url: /.*
   script: web/index.php
+
+skip_files:
+- ^\.idea$
+- ^\.git$
