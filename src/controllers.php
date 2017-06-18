@@ -6,7 +6,7 @@ use App\Controller\UsersController;
 use Silex\Application;
 
 $app['news.controller'] = function () use ($app) {
-    return new NewsController($app['config']);
+    return new NewsController($app['config'], $app['store.cache']);
 };
 $app['alerts.controller'] = function () use ($app) {
     return new AlertsController($app['model.user']);

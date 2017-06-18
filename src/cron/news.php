@@ -5,7 +5,9 @@ use Symfony\Component\Yaml\Yaml;
 
 require_once __DIR__ . '/../../vendor/autoload.php';
 
-
+/**
+ * Class NewsScraper
+ */
 class NewsScraper
 {
     const BASE_URL = "http://m.radiogdansk.pl/";
@@ -118,6 +120,9 @@ class NewsScraper
         $news = $memcache->get(self::CACHE_KEY);
         $memcache->set(self::CACHE_KEY, ['items' => $this->results, 'updatedAt' => date('Y-m-d H:i:s')]);
 
+        $dbCache = new \App\DataModel\Cache();
+        $dbCache->save($news);
+
         if (!empty($news)) {
             $lastUpdatedAt = $this->getUpdatedAt($news['items']);
             if (!empty($lastUpdatedAt) && $lastUpdatedAt != $updatedAt) {
@@ -142,7 +147,7 @@ class NewsScraper
         });
         if (empty($news)) return;
         $lastNews = $news[0];
-        
+
         $users = new User();
         $rows = $users->findAll();
         if (empty($rows)) return;
