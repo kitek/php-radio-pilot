@@ -12,7 +12,7 @@ class NewsScraper
 {
     const BASE_URL = "http://m.radiogdansk.pl/";
     const CACHE_KEY = "news";
-
+    public $log = [];
     private $date = "";
     private $href = "";
     private $results = [];
@@ -27,6 +27,7 @@ class NewsScraper
 
     function execute()
     {
+        $this->log[] = 'Started at ' . date('Y-m-d H:i:s');
         $this->scrapMeta();
         $this->scrapBody();
         $this->cacheIt();
@@ -42,6 +43,7 @@ class NewsScraper
             $this->href = $this->parseLink($strLink);
             if (!empty($this->date) && !empty($this->href)) break;
         }
+        $this->log[] = 'Meta: ' . $this->date . ' ' . $this->href;
     }
 
     private function fetch($url)
@@ -110,22 +112,25 @@ class NewsScraper
             $this->results[$i]['header'] = $headers[$i];
             $this->results[$i]['description'] = $descriptions[$i];
         }
+        $this->log[] = 'News found: ' . count($this->results);
     }
 
     private function cacheIt()
     {
+        $dbCache = new \App\DataModel\Cache();
         $memcache = new Memcache();
         $updatedAt = $this->getUpdatedAt($this->results);
+        $news = $dbCache->get();
 
-        $news = $memcache->get(self::CACHE_KEY);
-        $memcache->set(self::CACHE_KEY, ['items' => $this->results, 'updatedAt' => date('Y-m-d H:i:s')]);
-
-        $dbCache = new \App\DataModel\Cache();
-        $dbCache->save($news);
+        $cacheMe = ['items' => $this->results, 'updatedAt' => date('Y-m-d H:i:s')];
+        $memcache->set(self::CACHE_KEY, $cacheMe);
+        $dbCache->save($cacheMe);
 
         if (!empty($news)) {
             $lastUpdatedAt = $this->getUpdatedAt($news['items']);
-            if (!empty($lastUpdatedAt) && $lastUpdatedAt != $updatedAt) {
+            $requireSend = !empty($lastUpdatedAt) && $lastUpdatedAt != $updatedAt;
+            $this->log[] = 'News last updated at: ' . $lastUpdatedAt . ' shipment: ' . ($requireSend ? 'yes' : 'no');
+            if ($requireSend) {
                 $this->sendNewsletter($lastUpdatedAt);
             }
         }
@@ -146,16 +151,56 @@ class NewsScraper
             return $a['date'] > $lastUpdatedAt;
         });
         if (empty($news)) return;
-        $lastNews = $news[0];
+        $lastNews = reset($news);
 
-        $users = new User();
-        $rows = $users->findAll();
-        if (empty($rows)) return;
-        $ids = array_map(function ($a) {
-            return $a->getKeyName();
-        }, $rows);
+        $this->log[] = 'Notification:';
+        $this->log[] = $lastNews;
 
-        $this->sendNotification($ids, $lastNews['header'], $lastNews['description']);
+        $repo = new User();
+        $users = $repo->findAll();
+
+        $ids = $this->getRecipients($users, $lastNews);
+        $this->log[] = 'Recipients: ' . count($users) . ' | ' . count($ids);
+
+        $sent = $this->sendNotification($ids, $lastNews['header'], $lastNews['description']);
+        $wrongRecipients = [];
+        $this->log[] = $sent;
+
+        if (!empty($sent['failure'])) {
+            foreach ($sent['results'] as $key => $value) {
+                if (array_key_exists('error', $value)) {
+                    $wrongRecipients[] = $this->findUser($ids[$key], $users);
+                }
+            }
+        }
+
+        $this->log[] = 'Wrong recipients: ' . count($wrongRecipients);
+
+        if (!empty($wrongRecipients)) {
+            $repo->remove($wrongRecipients);
+        }
+    }
+
+    private function getRecipients($users, $lastNews)
+    {
+        if (empty($users)) return [];
+        $ids = array_map(function ($a) use ($lastNews) {
+            if (empty($a->alertPhrases)) return $a->getKeyName();
+            $found = false;
+            foreach ($a->alertPhrases as $phrase) {
+                if (false !== stripos($lastNews['header'], $phrase) || false !== stripos($lastNews['description'], $phrase)) {
+                    $found = true;
+                    break;
+                }
+            }
+            return $found ? $a->getKeyName() : '';
+        }, $users);
+
+        $ids = array_filter($ids, function ($a) {
+            return !empty($a);
+        });
+        $this->log[] = $ids;
+        return $ids;
     }
 
     private function sendNotification($to, $title, $body)
@@ -171,7 +216,7 @@ class NewsScraper
             'registration_ids' => $to
         ];
 
-        return $this->post($this->fcmServerUrl, json_encode($message), $this->fcmServerKey);
+        return json_decode($this->post($this->fcmServerUrl, json_encode($message), $this->fcmServerKey), true);
     }
 
     private function post($url, $message, $key)
@@ -193,6 +238,16 @@ class NewsScraper
         return $resp;
     }
 
+    private function findUser($deviceToken, $users)
+    {
+        foreach ($users as $user) {
+            if ($user->getKeyName() == $deviceToken) {
+                return $user;
+            }
+        }
+        return null;
+    }
+
     function display()
     {
         header('Content-Type: application/json');
@@ -205,4 +260,7 @@ $config = __DIR__ . '/../../config/settings.yml';
 $newsScraper = new NewsScraper(Yaml::parse(file_get_contents($config)));
 $newsScraper->execute();
 
-echo 'OK ' . date('Y-m-d H:i:s');
+syslog(LOG_INFO, json_encode($newsScraper->log));
+
+echo json_encode($newsScraper->log);
+

@@ -20,6 +20,8 @@ class User
         return (new Schema('User'))
             ->addString('secretToken', true)
             ->addStringList('alertPhrases', false)
+            ->addDatetime('createdAt', false)
+            ->addDatetime('updatedAt', false)
             ->addBoolean('alertsEnabled', true);
     }
 
@@ -27,8 +29,10 @@ class User
     {
         $user = new Entity();
         $user->secretToken = bin2hex(openssl_random_pseudo_bytes(32));
-        $user->notificationsEnabled = true;
+        $user->alertsEnabled = true;
         $user->alertPhrases = [];
+        $user->createdAt = new \DateTime();
+        $user->updatedAt = new \DateTime();
         $user->setKeyName($deviceToken);
         $this->store->upsert($user);
 
@@ -37,6 +41,7 @@ class User
 
     public function update($entity)
     {
+        $entity->updatedAt = new \DateTime();
         $this->store->upsert($entity);
     }
 
@@ -52,7 +57,7 @@ class User
 
     public function findAll()
     {
-        return $this->store->fetchAll();
+        return $this->store->fetchAll("SELECT * FROM User WHERE alertsEnabled = @isEnabled", ['isEnabled' => true]);
     }
 
     public function remove($user)

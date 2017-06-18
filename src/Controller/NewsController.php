@@ -28,6 +28,11 @@ class NewsController
         }
         if (empty($news)) $news = ['items' => [], 'expiredAt' => 0];
         $expiresIn = (strtotime($news['updatedAt']) + $this->config['cron_interval']) - time();
+        
+        usort($news['items'], function ($a, $b) {
+            return $a['date'] <= $b['date'];
+        });
+
         return new JsonResponse([
             'items' => $news['items'],
             'expiresIn' => $expiresIn > 0 ? $expiresIn : 0

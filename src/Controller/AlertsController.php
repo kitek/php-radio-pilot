@@ -24,7 +24,7 @@ class AlertsController
             return new JsonResponse($this->errors, $this->errors['code']);
         }
         return new JsonResponse([
-            'isEnabled' => $this->currentUser->notificationsEnabled,
+            'isEnabled' => $this->currentUser->alertsEnabled,
             'phrases' => $this->currentUser->alertPhrases ?: []
         ]);
     }
@@ -51,14 +51,14 @@ class AlertsController
         if (!$this->validateToken($request->get('secretToken')) || !$this->validatePhrase($phrase)) {
             return new JsonResponse($this->errors, $this->errors['code']);
         }
-        $phrases = $this->currentUser->alertPhrases;
+        $phrases = $this->currentUser->alertPhrases ?: [];
         if (!in_array($phrase, $phrases)) {
             $phrases[] = $phrase;
             $this->currentUser->alertPhrases = $phrases;
             $this->repo->update($this->currentUser);
         }
         return new JsonResponse([
-            'isEnabled' => $this->currentUser->notificationsEnabled,
+            'isEnabled' => $this->currentUser->alertsEnabled,
             'phrases' => $this->currentUser->alertPhrases ?: []
         ], 201);
     }
@@ -92,7 +92,7 @@ class AlertsController
             $this->repo->update($this->currentUser);
         }
         return new JsonResponse([
-            'isEnabled' => $this->currentUser->notificationsEnabled,
+            'isEnabled' => $this->currentUser->alertsEnabled,
             'phrases' => $this->currentUser->alertPhrases ?: []
         ]);
     }
@@ -103,10 +103,10 @@ class AlertsController
             return new JsonResponse($this->errors, $this->errors['code']);
         }
         $isEnabled = filter_var($request->get('isEnabled', false), FILTER_VALIDATE_BOOLEAN);
-        $this->currentUser->notificationsEnabled = $isEnabled;
+        $this->currentUser->alertsEnabled = $isEnabled;
         $this->repo->update($this->currentUser);
         return new JsonResponse([
-            'isEnabled' => $this->currentUser->notificationsEnabled,
+            'isEnabled' => $this->currentUser->alertsEnabled,
             'phrases' => $this->currentUser->alertPhrases ?: []
         ]);
     }
