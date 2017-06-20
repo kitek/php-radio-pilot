@@ -25,7 +25,7 @@ class AlertsController
         }
         return new JsonResponse([
             'isEnabled' => $this->currentUser->alertsEnabled,
-            'phrases' => $this->currentUser->alertPhrases ?: []
+            'phrases' => array_reverse($this->currentUser->alertPhrases ?: [])
         ]);
     }
 
@@ -59,7 +59,7 @@ class AlertsController
         }
         return new JsonResponse([
             'isEnabled' => $this->currentUser->alertsEnabled,
-            'phrases' => $this->currentUser->alertPhrases ?: []
+            'phrases' => array_reverse($this->currentUser->alertPhrases ?: [])
         ], 201);
     }
 
@@ -93,7 +93,7 @@ class AlertsController
         }
         return new JsonResponse([
             'isEnabled' => $this->currentUser->alertsEnabled,
-            'phrases' => $this->currentUser->alertPhrases ?: []
+            'phrases' => array_reverse($this->currentUser->alertPhrases ?: [])
         ]);
     }
 
@@ -107,7 +107,7 @@ class AlertsController
         $this->repo->update($this->currentUser);
         return new JsonResponse([
             'isEnabled' => $this->currentUser->alertsEnabled,
-            'phrases' => $this->currentUser->alertPhrases ?: []
+            'phrases' => array_reverse($this->currentUser->alertPhrases ?: [])
         ]);
     }
 }
