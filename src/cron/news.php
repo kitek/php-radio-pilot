@@ -94,13 +94,14 @@ class NewsScraper
     {
         if (empty($this->href)) throw new Exception('Invalid href to scrap body.');
         $hours = $headers = $descriptions = [];
-        $html = HtmlDomParser::str_get_html($this->fetch($this->href));
+        $html = HtmlDomParser::str_get_html($this->fetch($this->href.'?t='.time()));
         foreach ($html->find('.middle-date-hours') as $key => $hour) {
             $hours[] = trim($hour->innertext);
         }
-        foreach ($html->find('.catItemTitle-live') as $key => $header) {
+        foreach ($html->find('.catItemTitle') as $key => $header) {
             $headers[] = trim($header->innertext);
         }
+
         foreach ($html->find('.latestItemIntroText') as $key => $description) {
             $text = trim(strip_tags($description->innertext));
             $text = preg_replace("/Podziel się/", "", $text);
@@ -112,7 +113,13 @@ class NewsScraper
             $this->results[$i]['header'] = $headers[$i];
             $this->results[$i]['description'] = $descriptions[$i];
         }
+
         $this->log[] = 'News found: ' . count($this->results);
+        $this->log[] = '------------------------------------------------------';
+        foreach ($this->results as $item) {
+               $this->log[] = $item['date']." | ".$item['header'];
+        }
+        $this->log[] = '------------------------------------------------------';
     }
 
     private function cacheIt()
@@ -133,6 +140,8 @@ class NewsScraper
             if ($requireSend) {
                 $this->sendNewsletter($lastUpdatedAt);
             }
+        } else {
+            $this->log[] = 'No previous news. Cant send notifications.';
         }
     }
 
@@ -147,25 +156,33 @@ class NewsScraper
 
     private function sendNewsletter($lastUpdatedAt)
     {
+        $this->log[] = 'Sending notification...';
+
         $news = array_filter($this->results, function ($a) use ($lastUpdatedAt) {
             return $a['date'] > $lastUpdatedAt;
         });
-        if (empty($news)) return;
+        if (empty($news)) {
+            $this->log[] = 'No news to send.';
+            return;
+        }
         $lastNews = reset($news);
-
-        $this->log[] = 'Notification:';
-        $this->log[] = $lastNews;
+        $this->log[] = $lastNews['date']." | ".$lastNews['header'];
 
         $repo = new User();
         $users = $repo->findAll();
 
         $ids = $this->getRecipients($users, $lastNews);
-        $this->log[] = 'Recipients: ' . count($users) . ' | ' . count($ids);
+        if (empty($ids)) return;
 
         $sent = $this->sendNotification($ids, $lastNews['header'], $lastNews['description']);
-        $wrongRecipients = [];
-        $this->log[] = $sent;
 
+        $this->log[] = '------------------------------------------------------';
+        $this->log[] = 'Newsletter summary:';
+        $this->log[] = 'Total: '.count($ids);
+        $this->log[] = 'Success: '.$sent['success'];
+        $this->log[] = 'Failure: '.$sent['failure'];
+
+        $wrongRecipients = [];
         if (!empty($sent['failure'])) {
             foreach ($sent['results'] as $key => $value) {
                 if (array_key_exists('error', $value)) {
@@ -175,6 +192,7 @@ class NewsScraper
         }
 
         $this->log[] = 'Wrong recipients: ' . count($wrongRecipients);
+        $this->log[] = '------------------------------------------------------';
 
         if (!empty($wrongRecipients)) {
             $repo->remove($wrongRecipients);
@@ -183,7 +201,10 @@ class NewsScraper
 
     private function getRecipients($users, $lastNews)
     {
-        if (empty($users)) return [];
+        if (empty($users)) {
+            $this->log[] = 'No users in db.';
+            return [];
+        }
         $ids = array_map(function ($a) use ($lastNews) {
             if (empty($a->alertPhrases)) return $a->getKeyName();
             $found = false;
@@ -199,7 +220,14 @@ class NewsScraper
         $ids = array_filter($ids, function ($a) {
             return !empty($a);
         });
-        $this->log[] = $ids;
+
+        $this->log[] = 'Recipients: ' . count($users) . ' (total target: ' . count($ids).')';
+        $this->log[] = '------------------------------------------------------';
+        foreach ($ids as $id) {
+            $this->log[] = $id;    
+        }
+        $this->log[] = '------------------------------------------------------';
+        
         return $ids;
     }
 
@@ -216,7 +244,10 @@ class NewsScraper
             'registration_ids' => $to
         ];
 
-        return json_decode($this->post($this->fcmServerUrl, json_encode($message), $this->fcmServerKey), true);
+        $response = $this->post($this->fcmServerUrl, json_encode($message), $this->fcmServerKey);
+        $this->log[] = 'Raw response:';
+        $this->log[] = $response;
+        return json_decode($response, true);
     }
 
     private function post($url, $message, $key)
@@ -229,6 +260,7 @@ class NewsScraper
                 'Content-Type: application/json',
                 "Authorization: key=$key",
             ],
+            CURLOPT_FRESH_CONNECT => 1,
             CURLOPT_RETURNTRANSFER => 1,
             CURLOPT_URL => $url,
             CURLOPT_USERAGENT => 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:25.0) Gecko/20100101 Firefox/25.0'
@@ -260,7 +292,10 @@ $config = __DIR__ . '/../../config/settings.yml';
 $newsScraper = new NewsScraper(Yaml::parse(file_get_contents($config)));
 $newsScraper->execute();
 
-syslog(LOG_INFO, json_encode($newsScraper->log));
+$newsScraper->log[] = 'Done.';
+
+foreach ($newsScraper->log as $log) {
+    syslog(LOG_INFO, (in_array(gettype($log), ['array', 'object'])) ? json_encode($log) : $log);
+}
 
 echo json_encode($newsScraper->log);
-
