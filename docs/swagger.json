@@ -1,0 +1,287 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "version": "1.0.0",
+    "title": "Autopilot Gdańsk",
+    "description": "Backend app for fetching and serving news from Autopilot Radio Gdańsk web page",
+    "license": {
+      "name": "MIT",
+      "url": "http://opensource.org/licenses/MIT"
+    }
+  },
+  "host": "radio-pilot.appspot.com",
+  "tags": [
+    {
+      "name": "News"
+    },
+    {
+      "name": "Users"
+    },
+    {
+      "name": "Alerts"
+    }
+  ],
+  "schemes": [
+    "https"
+  ],
+  "paths": {
+    "/news": {
+      "get": {
+        "tags": [
+          "News"
+        ],
+        "summary": "List available news",
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {
+            "description": "Available news sorted from the newest.",
+            "schema": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/News"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/users/register": {
+      "post": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Register new User",
+        "description": "Register new device. This action is required for obtaining `secretToken`.",
+        "parameters": [
+          {
+            "$ref": "#/parameters/deviceToken"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Retuns device and secret tokens. The secret should be stored on the client side for future requests.",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "deviceToken": {
+                  "type": "string",
+                  "example": "abcedf:qwertyuiopasdfghjklzxcvbnm"
+                },
+                "secretToken": {
+                  "type": "string",
+                  "example": "TXCV7ciIGgxIzFPlVeuzZqE63t987ond"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Happens when something is wrong with deviceToken parameter.",
+            "schema": {
+              "$ref": "#/definitions/Error"
+            }
+          }
+        }
+      }
+    },
+    "/users/unregister": {
+      "post": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Unregister existing User",
+        "description": "Removes User and all his data.",
+        "parameters": [
+          {
+            "$ref": "#/parameters/deviceToken"
+          },
+          {
+            "$ref": "#/parameters/secretToken"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/responses/Error"
+          }
+        }
+      }
+    },
+    "/alerts": {
+      "get": {
+        "tags": [
+          "Alerts"
+        ],
+        "summary": "List added alerts",
+        "description": "If list of `phrases` is empty push notification will be send on every news. Otherwise only if news contains selected `phrases`.",
+        "parameters": [
+          {
+            "$ref": "#/parameters/secretToken"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/Alerts"
+          },
+          "400": {
+            "description": "Error"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Alerts"
+        ],
+        "summary": "Modify alerts settings",
+        "description": "Setting `isEnabled` to false will disable sending push notification to your.",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "isEnabled",
+            "description": "Enable or disable push all notifications.",
+            "type": "boolean",
+            "required": true
+          },
+          {
+            "$ref": "#/parameters/secretToken"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/Alerts"
+          }
+        }
+      }
+    },
+    "/alerts/phrases/{phrase}": {
+      "put": {
+        "tags": [
+          "Alerts"
+        ],
+        "summary": "Add new alert phrase",
+        "parameters": [
+          {
+            "name": "phrase",
+            "in": "path",
+            "description": "Alert phrase",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "$ref": "#/parameters/secretToken"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/Alerts"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Alerts"
+        ],
+        "description": "Remove specific alert phrase",
+        "parameters": [
+          {
+            "name": "phrase",
+            "in": "path",
+            "description": "Alert phrase",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "$ref": "#/parameters/secretToken"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/Alerts"
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "News": {
+      "type": "object",
+      "properties": {
+        "date": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "header": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        }
+      }
+    },
+    "Alerts": {
+      "type": "object",
+      "properties": {
+        "isEnabled": {
+          "type": "boolean",
+          "description": "Disable or enable receive push notifications"
+        },
+        "phrases": {
+          "type": "array",
+          "description": "List with alert phrases",
+          "items": {
+            "type": "string",
+            "minItems": 0
+          }
+        }
+      }
+    },
+    "Error": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "description": "Error code",
+          "example": 400
+        },
+        "error": {
+          "type": "string",
+          "description": "Error message",
+          "example": "Parameter `deviceToken` is required."
+        }
+      }
+    }
+  },
+  "parameters": {
+    "deviceToken": {
+      "in": "query",
+      "name": "deviceToken",
+      "type": "string",
+      "required": true,
+      "description": "Device token obtained from [Firebase Firebase Cloud Messaging](https://firebase.google.com/docs/cloud-messaging/android/client)"
+    },
+    "secretToken": {
+      "in": "query",
+      "name": "secretToken",
+      "type": "string",
+      "required": true,
+      "description": "Secret token obtained from registration"
+    }
+  },
+  "responses": {
+    "Error": {
+      "description": "Error response with code and message",
+      "schema": {
+        "$ref": "#/definitions/Error"
+      }
+    },
+    "Alerts": {
+      "description": "Alerts response",
+      "schema": {
+        "$ref": "#/definitions/Alerts"
+      }
+    }
+  }
+}

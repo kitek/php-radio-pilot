@@ -30,5 +30,5 @@ To deploy app execute:
 
 ## More
 
-- [REST API doc]()
+- [REST API doc](http://kitek.pl/php-radio-pilot/)
 - [Try it out](https://radio-pilot.appspot.com/news)
