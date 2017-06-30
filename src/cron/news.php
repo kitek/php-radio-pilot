@@ -10,7 +10,7 @@ require_once __DIR__ . '/../../vendor/autoload.php';
  */
 class NewsScraper
 {
-    const BASE_URL = "http://m.radiogdansk.pl/";
+    const BASE_URL = "http://radiogdansk.pl/";
     const CACHE_KEY = "news";
     public $log = [];
     private $date = "";
@@ -35,7 +35,7 @@ class NewsScraper
 
     private function scrapMeta()
     {
-        $html = HtmlDomParser::str_get_html($this->fetch(self::BASE_URL . 'autopilot'));
+        $html = HtmlDomParser::str_get_html($this->fetch(self::BASE_URL . 'autopilot?t='.time()));
         foreach ($html->find('.catItemHeader') as $key => $meta) {
             $strDate = $meta->find('.middle-date')[0]->innertext();
             $strLink = $meta->find('.k2ReadMore22')[0]->attr['href'];
@@ -48,12 +48,23 @@ class NewsScraper
 
     private function fetch($url)
     {
+        $this->log[] = 'Fetching...';
+        $this->log[] = $url;
+
         $curl = curl_init();
         curl_setopt_array($curl, array(
             CURLOPT_RETURNTRANSFER => 1,
+            CURLOPT_FRESH_CONNECT => 1,
+            CURLOPT_HTTPHEADER => [
+                'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+                'Cache-Control: no-cache',
+                'Connection: close',
+                'Pragma: no-cache'
+            ],
             CURLOPT_URL => $url,
-            CURLOPT_USERAGENT => 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:25.0) Gecko/20100101 Firefox/25.0'
+            CURLOPT_USERAGENT => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36'
         ));
+
         $resp = curl_exec($curl);
         curl_close($curl);
         return $resp;
@@ -95,6 +106,7 @@ class NewsScraper
         if (empty($this->href)) throw new Exception('Invalid href to scrap body.');
         $hours = $headers = $descriptions = [];
         $html = HtmlDomParser::str_get_html($this->fetch($this->href.'?t='.time()));
+
         foreach ($html->find('.middle-date-hours') as $key => $hour) {
             $hours[] = trim($hour->innertext);
         }
@@ -221,14 +233,19 @@ class NewsScraper
             return !empty($a);
         });
 
-        $this->log[] = 'Recipients: ' . count($users) . ' (total target: ' . count($ids).')';
-        $this->log[] = '------------------------------------------------------';
+        $results = [];
         foreach ($ids as $id) {
+            $results[] = $id;
+        }
+
+        $this->log[] = 'Recipients: ' . count($users) . ' (total target: ' . count($results).')';
+        $this->log[] = '------------------------------------------------------';
+        foreach ($results as $id) {
             $this->log[] = $id;    
         }
         $this->log[] = '------------------------------------------------------';
         
-        return $ids;
+        return $results;
     }
 
     private function sendNotification($to, $title, $body)
@@ -243,6 +260,9 @@ class NewsScraper
             'collapse_key' => 'News',
             'registration_ids' => $to
         ];
+
+        $this->log[] = 'FCM message:';
+        $this->log[] = json_encode($message);
 
         $response = $this->post($this->fcmServerUrl, json_encode($message), $this->fcmServerKey);
         $this->log[] = 'Raw response:';
