@@ -23,4 +23,8 @@ $app->post('/alerts', 'alerts.controller:updateAction');
 $app->put('/alerts/phrases/{phrase}', 'alerts.controller:addPhraseAction');
 $app->delete('/alerts/phrases/{phrase}', 'alerts.controller:delPhraseAction');
 
+$app->after(function ($request, $response) {
+	$response->headers->set('Access-Control-Allow-Origin', '*');
+});
+
 return $app;
