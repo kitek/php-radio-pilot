@@ -111,14 +111,14 @@ class NewsScraper
             $hours[] = trim($hour->innertext);
         }
         foreach ($html->find('.catItemTitle') as $key => $header) {
-            $headers[] = trim($header->innertext);
+            $headers[] = trim(html_entity_decode($header->innertext));
         }
 
         foreach ($html->find('.latestItemIntroText') as $key => $description) {
             $text = trim(strip_tags($description->innertext));
             $text = preg_replace("/Podziel się/", "", $text);
             $text = preg_replace("/\s+/", " ", $text);
-            $descriptions[] = trim($text);
+            $descriptions[] = trim(html_entity_decode($text));
         }
         for ($i = 0; $i < count($hours); $i++) {
             $this->results[$i]['date'] = $this->date . " " . $hours[$i];
