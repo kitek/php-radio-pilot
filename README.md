@@ -20,7 +20,7 @@ Google App Engine app for fetching and serving news from [Autopilot Radio Gdańs
 
 To run app on [Local Development Server](https://cloud.google.com/appengine/docs/standard/python/tools/using-local-server) execute: 
 
-`dev_appserver.py -A php-radio-pilot`
+`dev_appserver.py -A php-radio-pilot .`
 
 To deploy app execute:
 

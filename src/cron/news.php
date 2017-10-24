@@ -35,7 +35,7 @@ class NewsScraper
 
     private function scrapMeta()
     {
-        $html = HtmlDomParser::str_get_html($this->fetch(self::BASE_URL . 'autopilot?t='.time()));
+        $html = HtmlDomParser::str_get_html($this->fetch(self::BASE_URL . 'autopilot?t=' . time()));
         foreach ($html->find('.catItemHeader') as $key => $meta) {
             $strDate = $meta->find('.middle-date')[0]->innertext();
             $strLink = $meta->find('.k2ReadMore22')[0]->attr['href'];
@@ -105,7 +105,7 @@ class NewsScraper
     {
         if (empty($this->href)) throw new Exception('Invalid href to scrap body.');
         $hours = $headers = $descriptions = [];
-        $html = HtmlDomParser::str_get_html($this->fetch($this->href.'?t='.time()));
+        $html = HtmlDomParser::str_get_html($this->fetch($this->href . '?t=' . time()));
 
         foreach ($html->find('.middle-date-hours') as $key => $hour) {
             $hours[] = trim($hour->innertext);
@@ -120,16 +120,23 @@ class NewsScraper
             $text = preg_replace("/\s+/", " ", $text);
             $descriptions[] = trim(html_entity_decode($text));
         }
+        $missedRows = 0;
+        $this->log[] = 'Now: ' . date('Y-m-d H:i:s');
         for ($i = 0; $i < count($hours); $i++) {
-            $this->results[$i]['date'] = $this->date . " " . $hours[$i];
-            $this->results[$i]['header'] = $headers[$i];
-            $this->results[$i]['description'] = $descriptions[$i];
+            if ($this->date == date('Y-m-d') && $hours[$i] <= date('H:i')) {
+                $this->results[$i]['date'] = $this->date . " " . $hours[$i];
+                $this->results[$i]['header'] = $headers[$i];
+                $this->results[$i]['description'] = $descriptions[$i];
+            } else {
+                $missedRows++;
+            }
         }
 
         $this->log[] = 'News found: ' . count($this->results);
+        $this->log[] = 'News missed: ' . $missedRows;
         $this->log[] = '------------------------------------------------------';
         foreach ($this->results as $item) {
-               $this->log[] = $item['date']." | ".$item['header'];
+            $this->log[] = $item['date'] . " | " . $item['header'];
         }
         $this->log[] = '------------------------------------------------------';
     }
@@ -178,7 +185,7 @@ class NewsScraper
             return;
         }
         $lastNews = reset($news);
-        $this->log[] = $lastNews['date']." | ".$lastNews['header'];
+        $this->log[] = $lastNews['date'] . " | " . $lastNews['header'];
 
         $repo = new User();
         $users = $repo->findAll();
@@ -190,9 +197,9 @@ class NewsScraper
 
         $this->log[] = '------------------------------------------------------';
         $this->log[] = 'Newsletter summary:';
-        $this->log[] = 'Total: '.count($ids);
-        $this->log[] = 'Success: '.$sent['success'];
-        $this->log[] = 'Failure: '.$sent['failure'];
+        $this->log[] = 'Total: ' . count($ids);
+        $this->log[] = 'Success: ' . $sent['success'];
+        $this->log[] = 'Failure: ' . $sent['failure'];
 
         $wrongRecipients = [];
         if (!empty($sent['failure'])) {
@@ -238,13 +245,13 @@ class NewsScraper
             $results[] = $id;
         }
 
-        $this->log[] = 'Recipients: ' . count($users) . ' (total target: ' . count($results).')';
+        $this->log[] = 'Recipients: ' . count($users) . ' (total target: ' . count($results) . ')';
         $this->log[] = '------------------------------------------------------';
         foreach ($results as $id) {
-            $this->log[] = $id;    
+            $this->log[] = $id;
         }
         $this->log[] = '------------------------------------------------------';
-        
+
         return $results;
     }
 
